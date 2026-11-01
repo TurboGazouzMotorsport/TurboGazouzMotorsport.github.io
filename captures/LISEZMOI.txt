@@ -1,0 +1,11 @@
+Vraies captures d'écran (facultatif)
+====================================
+Déposez ici des captures de TGM au format PNG, en 16/9 (ex. 1600 x 900), avec ces noms :
+
+  fichier.png      vue hexadécimale + liste des maps
+  3d.png           une map en 3D avec l'original en transparence
+  log.png          un log de roulage sur une map
+  comparaison.png  la comparaison des maps modifiées
+
+Chaque fichier présent remplace automatiquement l'illustration de l'onglet correspondant.
+Les fichiers absents gardent l'illustration dessinée par la page.

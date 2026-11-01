@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TGM Mapping Software</title>
+<meta name="description" content="Éditeur de cartographies moteur : ouvrez vos fichiers calculateur, retrouvez les maps automatiquement, modifiez et corrigez le checksum. Essai gratuit 14 jours.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23163542'/%3E%3Cpath d='M6 22h4v-6H6zm6 0h4V12h-4zm6 0h4V8h-4zm6 0h2V14h-2z' fill='%23f2b84b'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --nuit:#0f1d26;        /* fond : bleu atelier */
+  --panneau:#16303d;
+  --trait:#25495a;
+  --encre:#eaf1f2;
+  --gris:#93a9b2;
+  --froid:#2fb7b0;       /* bas de l'échelle d'une map */
+  --tiede:#f2b84b;
+  --chaud:#ef5b2c;       /* haut de l'échelle */
+  --rayon:14px;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--nuit);color:var(--encre);font:400 17px/1.6 "Archivo",system-ui,sans-serif;
+  font-variation-settings:"wdth" 100;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+img{max-width:100%;display:block}
+:focus-visible{outline:3px solid var(--tiede);outline-offset:3px;border-radius:6px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+
+/* ---------- barre ---------- */
+header.top{position:sticky;top:0;z-index:20;background:rgba(15,29,38,.86);backdrop-filter:blur(10px);
+  border-bottom:1px solid rgba(37,73,90,.6)}
+.top .wrap{display:flex;align-items:center;gap:28px;height:68px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:800;
+  font-variation-settings:"wdth" 125;letter-spacing:.02em;font-size:20px}
+.logo svg{width:30px;height:30px}
+.top nav{display:flex;gap:22px;margin-left:auto;font-size:15px}
+.top nav a{text-decoration:none;color:var(--gris)}
+.top nav a:hover{color:var(--encre)}
+.btn{display:inline-flex;align-items:center;gap:10px;border:0;cursor:pointer;text-decoration:none;
+  font:700 16px/1 "Archivo",sans-serif;font-variation-settings:"wdth" 110;border-radius:999px;
+  padding:15px 24px;transition:transform .15s ease, box-shadow .15s ease}
+.btn:active{transform:translateY(1px)}
+.btn-chaud{background:linear-gradient(90deg,var(--tiede),var(--chaud));color:#1b0f08;
+  box-shadow:0 10px 30px -10px rgba(239,91,44,.7)}
+.btn-chaud:hover{box-shadow:0 14px 34px -10px rgba(239,91,44,.95)}
+.btn-ligne{background:transparent;color:var(--encre);box-shadow:inset 0 0 0 1.5px var(--trait)}
+.btn-ligne:hover{box-shadow:inset 0 0 0 1.5px var(--gris)}
+.btn-petit{padding:11px 18px;font-size:14px}
+
+/* ---------- héros ---------- */
+.hero{padding:72px 0 40px;position:relative;overflow:hidden}
+.hero .wrap{display:grid;grid-template-columns:1.02fr 1fr;gap:56px;align-items:center}
+h1{font-weight:850;font-variation-settings:"wdth" 118;font-size:clamp(40px,5.6vw,72px);line-height:.98;
+  margin:0 0 24px;letter-spacing:-.01em}
+h1 .ligne{display:block}
+.chapo{font-size:20px;color:var(--gris);max-width:30em;margin:0 0 32px}
+.actions{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.note{font-size:14px;color:var(--gris);margin-top:16px}
+
+/* map vivante */
+.carte{background:linear-gradient(180deg,#183644,#13293a);border:1px solid var(--trait);
+  border-radius:20px;padding:18px 18px 14px;box-shadow:0 40px 80px -40px rgba(0,0,0,.8)}
+.carte-tete{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px}
+.carte-tete b{font-family:var(--mono);font-size:15px;color:var(--tiede)}
+.carte-tete span{font-size:13px;color:var(--gris)}
+.grille{display:grid;grid-template-columns:44px repeat(12,1fr);gap:3px;font-family:var(--mono);font-size:11px}
+.grille .ax{color:var(--gris);display:flex;align-items:center;justify-content:center;height:24px}
+.grille .ax.r{height:30px}
+.grille .c{height:30px;border-radius:4px;display:flex;align-items:center;justify-content:center;
+  color:rgba(10,20,26,.82);font-weight:600;cursor:crosshair;transform:scale(.6);opacity:0;
+  transition:transform .5s cubic-bezier(.2,.9,.3,1.2),opacity .4s ease,outline-color .1s}
+.grille.ok .c{transform:none;opacity:1}
+.grille .c.mod{outline:2px solid rgba(255,255,255,.75);outline-offset:-2px}
+.grille .c:hover{outline:2px solid #fff;outline-offset:-2px}
+.lecture{display:flex;justify-content:space-between;gap:12px;margin-top:12px;font-size:13px;color:var(--gris);
+  min-height:22px}
+.lecture strong{color:var(--encre);font-family:var(--mono);font-weight:600}
+.bascule{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.bascule input{accent-color:var(--tiede)}
+
+/* ---------- familles ---------- */
+.familles{border-block:1px solid rgba(37,73,90,.6);padding:22px 0;margin-top:28px}
+.familles .wrap{display:flex;gap:14px 26px;flex-wrap:wrap;align-items:center}
+.familles p{margin:0;color:var(--gris);font-size:14px;margin-right:6px}
+.familles span{font-family:var(--mono);font-size:14px;color:var(--encre);opacity:.85}
+
+/* ---------- sections ---------- */
+section{padding:96px 0}
+h2{font-weight:800;font-variation-settings:"wdth" 115;font-size:clamp(30px,3.6vw,46px);line-height:1.05;
+  margin:0 0 14px;letter-spacing:-.005em}
+.intro{color:var(--gris);font-size:19px;max-width:38em;margin:0 0 44px}
+
+/* captures */
+.onglets{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+.onglets button{font:600 15px "Archivo",sans-serif;color:var(--gris);background:transparent;cursor:pointer;
+  border:1.5px solid var(--trait);border-radius:999px;padding:10px 18px}
+.onglets button[aria-selected=true]{color:#1b0f08;background:var(--tiede);border-color:var(--tiede)}
+.fenetre{border:1px solid var(--trait);border-radius:16px;overflow:hidden;background:#0b161d;
+  box-shadow:0 50px 90px -50px rgba(0,0,0,.9)}
+.fenetre .barre{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#132833;
+  border-bottom:1px solid var(--trait);font-size:13px;color:var(--gris)}
+.fenetre .barre i{width:11px;height:11px;border-radius:50%;background:#2b4c5b;display:inline-block}
+.fenetre .barre em{margin-left:10px;font-style:normal}
+.ecran{aspect-ratio:16/9;position:relative}
+.ecran img{width:100%;height:100%;object-fit:cover}
+.legende{color:var(--gris);font-size:16px;margin:16px 4px 0;max-width:60em}
+.app{display:grid;height:100%;font-family:var(--mono);font-size:12px;color:#c7d6db}
+.app .liste{background:#0f2029;border-right:1px solid #1f3a47;padding:12px;overflow:hidden}
+.app .liste div{padding:5px 8px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app .liste .sel{background:#24485a;color:#fff}
+.app .liste small{color:var(--froid)}
+.pastille{display:inline-block;font-size:10px;padding:1px 6px;border-radius:99px;margin-left:6px;
+  background:rgba(47,183,176,.18);color:var(--froid)}
+.hexa{padding:14px 18px;line-height:1.8;font-size:13px;overflow:hidden;white-space:pre}
+.hexa .adr{color:#5f7f8c}
+.hexa .zone{background:rgba(242,184,75,.22);color:#ffd88a;border-radius:3px}
+.hexa .modif{background:rgba(239,91,44,.35);color:#ffb59a;border-radius:3px}
+
+/* fonctions */
+.flux{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--trait);border-radius:20px;
+  overflow:hidden}
+.etape{padding:34px 30px 30px;background:var(--panneau)}
+.etape+.etape{border-left:1px solid var(--trait)}
+.etape .num{font-family:var(--mono);color:var(--tiede);font-size:14px}
+.etape h3{font-weight:800;font-variation-settings:"wdth" 120;font-size:26px;margin:6px 0 18px}
+.etape ul{list-style:none;margin:0;padding:0}
+.etape li{padding:12px 0;border-top:1px solid rgba(37,73,90,.7)}
+.etape li b{display:block;font-weight:700}
+.etape li span{color:var(--gris);font-size:15px}
+.pro{font-family:var(--mono);font-size:11px;color:#1b0f08;background:var(--tiede);border-radius:4px;
+  padding:1px 5px;margin-left:6px;vertical-align:2px;font-weight:600}
+
+/* prix */
+.tarifs{display:grid;grid-template-columns:1fr 1.12fr;gap:22px;align-items:stretch}
+.offre{border:1px solid var(--trait);border-radius:22px;padding:34px;background:var(--panneau);display:flex;
+  flex-direction:column}
+.offre.vedette{background:linear-gradient(160deg,#21414f,#16303d 55%);border-color:var(--tiede);
+  position:relative}
+.offre.vedette::before{content:"";position:absolute;inset:0;border-radius:22px;pointer-events:none;
+  background:radial-gradient(500px 220px at 85% -10%,rgba(242,184,75,.22),transparent 70%)}
+.offre h3{font-weight:800;font-variation-settings:"wdth" 120;font-size:28px;margin:0}
+.offre .pour{color:var(--gris);margin:6px 0 22px}
+.montant{display:flex;align-items:flex-end;gap:10px;margin-bottom:6px}
+.montant b{font-weight:900;font-variation-settings:"wdth" 125;font-size:72px;line-height:.9}
+.montant span{color:var(--gris);padding-bottom:8px;font-size:15px;line-height:1.3}
+.offre ul{list-style:none;padding:0;margin:22px 0 28px;flex:1}
+.offre li{padding:8px 0 8px 30px;position:relative}
+.offre li::before{content:"";position:absolute;left:0;top:13px;width:16px;height:9px;border-left:2.5px solid var(--froid);
+  border-bottom:2.5px solid var(--froid);transform:rotate(-45deg)}
+.offre li.non{color:#6d8792}
+.offre li.non::before{border:0;height:2.5px;top:19px;width:14px;background:#4b6a77;transform:none}
+.offre .btn{align-self:flex-start}
+.essai-bandeau{margin-top:22px;padding:22px 26px;border-radius:18px;border:1.5px dashed var(--trait);
+  display:flex;gap:20px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.essai-bandeau p{margin:0;color:var(--gris)}
+.essai-bandeau strong{color:var(--encre)}
+
+/* téléchargement */
+.telecharger{background:radial-gradient(900px 400px at 15% 0%,rgba(47,183,176,.16),transparent 60%),
+  radial-gradient(700px 360px at 100% 100%,rgba(239,91,44,.14),transparent 60%),#122631;
+  border-block:1px solid var(--trait)}
+.telecharger .wrap{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.etapes{counter-reset:e;list-style:none;padding:0;margin:0}
+.etapes li{counter-increment:e;position:relative;padding:0 0 22px 52px}
+.etapes li::before{content:counter(e);position:absolute;left:0;top:-2px;width:34px;height:34px;border-radius:50%;
+  display:grid;place-items:center;font:700 15px var(--mono);background:var(--panneau);
+  box-shadow:inset 0 0 0 1.5px var(--tiede);color:var(--tiede)}
+.etapes b{display:block}
+.etapes span{color:var(--gris);font-size:15px}
+.config{font-size:14px;color:var(--gris);margin-top:18px}
+details{margin-top:18px;border-top:1px solid var(--trait);padding-top:14px;color:var(--gris);font-size:15px}
+summary{cursor:pointer;color:var(--encre)}
+
+footer{padding:40px 0 60px;color:var(--gris);font-size:14px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:16px 40px;justify-content:space-between}
+footer p{margin:0;max-width:44em}
+
+/* ---------- mobile ---------- */
+@media (max-width:920px){
+  .hero .wrap,.telecharger .wrap{grid-template-columns:1fr}
+  .flux{grid-template-columns:1fr}
+  .etape+.etape{border-left:0;border-top:1px solid var(--trait)}
+  .tarifs{grid-template-columns:1fr}
+  .top nav{display:none}
+  .top .wrap{justify-content:space-between}
+}
+@media (max-width:560px){
+  .wrap{padding:0 16px}
+  .grille{grid-template-columns:30px repeat(12,1fr);gap:2px;font-size:0}
+  .grille .ax{font-size:9px}
+  .grille .ax.h{font-size:0}
+  .grille .ax.h:nth-child(odd){font-size:9px}
+  .ecran{aspect-ratio:4/3}
+  .app{grid-template-columns:1fr!important}
+  .app .liste{display:none}
+  section{padding:72px 0}
+  .montant b{font-size:60px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+  .grille .c{transform:none;opacity:1}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#" aria-label="TGM Mapping Software, accueil">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#163542"/>
+        <path d="M6 23h4v-6H6zm6 0h4V12h-4zm6 0h4V8h-4zm6 0h2v-9h-2z" fill="#f2b84b"/></svg>
+      TGM
+    </a>
+    <nav aria-label="Sections">
+      <a href="#captures">Captures</a>
+      <a href="#fonctions">Fonctions</a>
+      <a href="#prix">Prix</a>
+      <a href="#telecharger">Téléchargement</a>
+    </nav>
+    <a class="btn btn-chaud btn-petit js-essai" href="#telecharger">Essai 14 jours</a>
+  </div>
+</header>
+
+<main>
+  <!-- ================= HÉROS ================= -->
+  <div class="hero">
+    <div class="wrap">
+      <div>
+        <h1><span class="ligne">Ouvrez le fichier.</span><span class="ligne">TGM trouve les maps.</span></h1>
+        <p class="chapo">TGM Mapping Software identifie le calculateur, place les cartographies au bon
+          endroit et corrige le checksum avant l'export. Vous passez votre temps sur la calibration,
+          pas à chercher des adresses.</p>
+        <div class="actions">
+          <a class="btn btn-chaud js-essai" href="#telecharger">Essayer 14 jours gratuitement</a>
+          <a class="btn btn-ligne" href="#prix">Voir les prix</a>
+        </div>
+        <p class="note">Windows 10 et 11. Sans carte bancaire. En français et en anglais.</p>
+      </div>
+
+      <figure class="carte" aria-label="Exemple de map de charge, survolez une cellule pour lire sa valeur">
+        <div class="carte-tete"><b>LDRXN</b><span>Charge maximale demandée, % — régime × rapport</span></div>
+        <div class="grille" id="grille" role="img" aria-label="Map 12 colonnes sur 8 lignes, cellules colorées du bleu au rouge"></div>
+        <div class="lecture">
+          <span id="lecture">Survolez ou touchez une cellule</span>
+          <label class="bascule"><input type="checkbox" id="stage" checked> Stage 1 appliqué</label>
+        </div>
+      </figure>
+    </div>
+    <div class="familles">
+      <div class="wrap">
+        <p>Repérage automatique déjà entraîné sur</p>
+        <span>EDC16</span><span>EDC17</span><span>ME7.x</span><span>ME9</span><span>MED9.x</span><span>MED17</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= CAPTURES ================= -->
+  <section id="captures">
+    <div class="wrap">
+      <h2>Le logiciel en images</h2>
+      <p class="intro">Une seule fenêtre pour tout le travail : le fichier en hexadécimal, la liste des maps,
+        la map ouverte en tableau ou en 3D, et vos logs de roulage par-dessus.</p>
+      <div class="onglets" role="tablist" aria-label="Captures d'écran">
+        <button role="tab" aria-selected="true" data-cap="0">Fichier et maps</button>
+        <button role="tab" aria-selected="false" data-cap="1">Map en 3D</button>
+        <button role="tab" aria-selected="false" data-cap="2">Log de roulage</button>
+        <button role="tab" aria-selected="false" data-cap="3">Comparaison</button>
+      </div>
+      <div class="fenetre">
+        <div class="barre"><i></i><i></i><i></i><em id="cap-titre">B21DZ04o.BIN — TGM Mapping Software</em></div>
+        <div class="ecran" id="ecran"></div>
+      </div>
+      <p class="legende" id="cap-legende"></p>
+    </div>
+  </section>
+
+  <!-- ================= FONCTIONS ================= -->
+  <section id="fonctions" style="padding-top:20px">
+    <div class="wrap">
+      <h2>Du fichier lu au fichier à flasher</h2>
+      <p class="intro">Les trois étapes d'une modification, dans l'ordre où vous les faites.
+        Les fonctions marquées <span class="pro" style="margin:0">PRO</span> font partie de la licence Pro.</p>
+      <div class="flux">
+        <div class="etape">
+          <div class="num">1</div>
+          <h3>Repérer</h3>
+          <ul>
+            <li><b>Ouvrir tous les formats courants</b><span>.bin, .ori, Intel HEX, S-record et projets WinOLS .ols.</span></li>
+            <li><b>Identification du calculateur<span class="pro">PRO</span></b><span>Famille, logiciel et version reconnus à l'ouverture.</span></li>
+            <li><b>Maps trouvées automatiquement<span class="pro">PRO</span></b><span>Empreintes issues d'une base de calculateurs de référence : nom, dimensions, axes et unités, chaque map marquée « sûre » ou « à vérifier ».</span></li>
+            <li><b>Import de vos descriptions</b><span>DAMOS, A2L, XDF, mappacks .kp et CSV.</span></li>
+          </ul>
+        </div>
+        <div class="etape">
+          <div class="num">2</div>
+          <h3>Modifier</h3>
+          <ul>
+            <li><b>Tableau, 2D et 3D</b><span>La 3D affiche l'original en transparence sous votre version.</span></li>
+            <li><b>Éditeur hexadécimal complet</b><span>Recherche, sélection, copier-coller, annuler et rétablir.</span></li>
+            <li><b>Assistant stage 1<span class="pro">PRO</span></b><span>Recettes diesel et essence turbo, avec contrôle des écarts et des valeurs limites.</span></li>
+            <li><b>Logs de roulage sur la map<span class="pro">PRO</span></b><span>Courbes dans le temps et point exact interpolé dans la map.</span></li>
+          </ul>
+        </div>
+        <div class="etape">
+          <div class="num">3</div>
+          <h3>Livrer</h3>
+          <ul>
+            <li><b>Checksums corrigés</b><span>Contrôle à chaque modification, correction à l'export.</span></li>
+            <li><b>Versions du même fichier</b><span>Gardez l'original et autant de variantes que nécessaire.</span></li>
+            <li><b>Comparer et reporter<span class="pro">PRO</span></b><span>Maps modifiées entre deux fichiers, écarts en %, report sur un autre fichier du même logiciel.</span></li>
+            <li><b>Mises à jour automatiques</b><span>Nouvelles versions et nouvelles empreintes installées au démarrage.</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PRIX ================= -->
+  <section id="prix" style="padding-top:20px">
+    <div class="wrap">
+      <h2>Deux licences, un seul paiement</h2>
+      <p class="intro">Chaque licence est activée sur un ordinateur. Les mises à jour sont incluses.</p>
+      <div class="tarifs">
+        <div class="offre">
+          <h3>Standard</h3>
+          <p class="pour">Pour éditer vos fichiers avec vos propres descriptions.</p>
+          <div class="montant"><b id="prix-standard">30 €</b><span>une fois<br>par ordinateur</span></div>
+          <ul>
+            <li>Ouverture .bin, .hex, .ols</li>
+            <li>Éditeur hexadécimal</li>
+            <li>Maps en tableau, 2D et 3D</li>
+            <li>Import DAMOS, A2L, XDF, .kp</li>
+            <li>Correction des checksums</li>
+            <li>Versions et export</li>
+            <li class="non">Identification et repérage automatiques</li>
+            <li class="non">Assistant, logs, comparaison et report</li>
+          </ul>
+          <a class="btn btn-ligne js-acheter" data-offre="Standard" href="#">Commander la Standard</a>
+        </div>
+        <div class="offre vedette">
+          <h3>Pro</h3>
+          <p class="pour">Pour aller vite sur des fichiers que vous ne connaissez pas.</p>
+          <div class="montant"><b id="prix-pro">60 €</b><span>une fois<br>par ordinateur</span></div>
+          <ul>
+            <li>Tout ce que contient la Standard</li>
+            <li>Identification automatique du calculateur</li>
+            <li>Repérage automatique des maps</li>
+            <li>Assistant de modification stage 1</li>
+            <li>Logs de roulage sur la map</li>
+            <li>Comparaison et report des modifications</li>
+            <li>Nouvelles empreintes en continu</li>
+          </ul>
+          <a class="btn btn-chaud js-acheter" data-offre="Pro" href="#">Commander la Pro</a>
+        </div>
+      </div>
+      <div class="essai-bandeau">
+        <p><strong>Pas encore décidé ?</strong> L'essai gratuit de 14 jours donne accès à toute la version Pro.</p>
+        <a class="btn btn-ligne btn-petit js-essai" href="#telecharger">Démarrer l'essai</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TÉLÉCHARGEMENT ================= -->
+  <section id="telecharger" class="telecharger">
+    <div class="wrap">
+      <div>
+        <h2>Prêt en deux minutes</h2>
+        <p class="intro" style="margin-bottom:28px">Téléchargez l'installateur, puis activez l'essai depuis le logiciel.
+          Aucune carte bancaire n'est demandée.</p>
+        <a class="btn btn-chaud" id="lien-telecharger" href="#">Télécharger TGM pour Windows</a>
+        <p class="config">Windows 10 ou 11, 64 bits. Une connexion Internet pour l'activation.</p>
+        <details>
+          <summary>Windows affiche « Éditeur inconnu » ?</summary>
+          <p>C'est normal pour un logiciel indépendant. Cliquez sur « Informations complémentaires »,
+            puis sur « Exécuter quand même ». L'installateur provient de la page officielle des
+            versions de TGM sur GitHub.</p>
+        </details>
+      </div>
+      <ol class="etapes">
+        <li><b>Installez TGM</b><span>Lancez l'installateur téléchargé et suivez les étapes.</span></li>
+        <li><b>Démarrez l'essai</b><span>À l'ouverture, cliquez sur « Essai gratuit 14 jours ».</span></li>
+        <li><b>Ouvrez un fichier</b><span>Glissez votre .bin dans la fenêtre : l'identification démarre seule.</span></li>
+        <li><b>Gardez votre travail</b><span>À l'achat, entrez votre clé dans Aide, Activation. Vos projets restent en place.</span></li>
+      </ol>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>© <span id="annee"></span> TurboGazouzMotorsport. TGM Mapping Software est destiné aux professionnels :
+      toute modification d'un calculateur doit respecter la réglementation de votre pays.</p>
+    <p><a href="#" id="lien-contact">turbogazouzmotorsport@gmail.com</a></p>
+  </div>
+</footer>
+
+<script>
+/* ======================= À MODIFIER SI BESOIN ======================= */
+const CONFIG = {
+  email: "turbogazouzmotorsport@gmail.com",
+  // page des versions : contient toujours le dernier installateur
+  telecharger: "https://github.com/TurboGazouzMotorsport/tgm-ms-maj/releases/latest",
+  prixStandard: "30 €",
+  prixPro: "60 €",
+};
+/* ==================================================================== */
+
+document.getElementById("annee").textContent = new Date().getFullYear();
+document.getElementById("prix-standard").textContent = CONFIG.prixStandard;
+document.getElementById("prix-pro").textContent = CONFIG.prixPro;
+const dl = document.getElementById("lien-telecharger");
+dl.href = CONFIG.telecharger;
+dl.rel = "noopener";
+const contact = document.getElementById("lien-contact");
+contact.href = "mailto:" + CONFIG.email;
+document.querySelectorAll(".js-acheter").forEach(a => {
+  const offre = a.dataset.offre;
+  a.href = "mailto:" + CONFIG.email + "?subject=" + encodeURIComponent("Commande TGM Mapping Software " + offre) +
+    "&body=" + encodeURIComponent("Bonjour,\n\nJe souhaite commander la licence " + offre +
+    " de TGM Mapping Software.\n\nNom ou société :\nVille :\n\nMerci !");
+});
+
+/* ---------- map vivante (héros) ---------- */
+const grille = document.getElementById("grille");
+const lecture = document.getElementById("lecture");
+const stage = document.getElementById("stage");
+const RPM = [1000,1500,2000,2500,3000,3500,4000,4500,5000,5500,6000,6500];
+const RAP = [1,2,3,4,5,6];
+const base = RAP.map((g, r) => RPM.map((n, c) => {
+  const x = c / 11, y = r / 5;
+  return Math.round(95 + 70 * Math.sin(Math.min(1, x * 1.25) * Math.PI / 2) * (0.75 + 0.25 * y) - 18 * Math.max(0, x - .8) * 5);
+}));
+const modifie = (r, c) => c >= 3 && c <= 9 && r >= 1;
+function valeur(r, c) { return stage.checked && modifie(r, c) ? Math.round(base[r][c] * 1.1) : base[r][c]; }
+function couleur(v) {
+  const t = Math.max(0, Math.min(1, (v - 80) / 110));
+  const a = [47,183,176], b = [242,184,75], d = [239,91,44];
+  const m = t < .55 ? [a, b, t / .55] : [b, d, (t - .55) / .45];
+  return "rgb(" + m[0].map((x, i) => Math.round(x + (m[1][i] - x) * m[2])).join(",") + ")";
+}
+grille.appendChild(Object.assign(document.createElement("div"), { className: "ax", textContent: "" }));
+RPM.forEach(n => grille.appendChild(Object.assign(document.createElement("div"),
+  { className: "ax h", textContent: (n / 1000).toFixed(1) })));
+const cellules = [];
+RAP.forEach((g, r) => {
+  grille.appendChild(Object.assign(document.createElement("div"), { className: "ax r", textContent: g + "e" }));
+  RPM.forEach((n, c) => {
+    const d = document.createElement("div");
+    d.className = "c";
+    d.style.transitionDelay = ((r + c) * 28) + "ms";
+    const lire = () => {
+      const v = valeur(r, c), o = base[r][c];
+      lecture.innerHTML = `${n} tr/min, ${g}<sup>e</sup> : <strong>${v} %</strong>` +
+        (v !== o ? ` <span>(origine ${o} %, +${Math.round((v / o - 1) * 100)} %)</span>` : "");
+    };
+    d.addEventListener("mouseenter", lire);
+    d.addEventListener("click", lire);                 // écrans tactiles
+    grille.appendChild(d);
+    cellules.push([d, r, c]);
+  });
+});
+function peindre() {
+  cellules.forEach(([d, r, c]) => {
+    const v = valeur(r, c);
+    d.textContent = v;
+    d.style.background = couleur(v);
+    d.classList.toggle("mod", stage.checked && modifie(r, c));
+  });
+}
+stage.addEventListener("change", peindre);
+peindre();
+requestAnimationFrame(() => requestAnimationFrame(() => grille.classList.add("ok")));
+setTimeout(() => cellules.forEach(([d]) => d.style.transitionDelay = "0ms"), 1500);
+
+/* ---------- captures (illustrations ; remplacées par captures/*.png si présentes) ---------- */
+const CAPTURES = [
+  { titre: "B21DZ04o.BIN — TGM Mapping Software", fichier: "captures/fichier.png",
+    legende: "Le fichier en hexadécimal, avec à gauche les maps trouvées automatiquement. Les zones d'une map sont surlignées, les octets modifiés ressortent en orange." },
+  { titre: "KFMIRL — vue 3D", fichier: "captures/3d.png",
+    legende: "La version modifiée en couleurs, l'original en transparence par-dessous : l'écart se voit d'un coup d'œil." },
+  { titre: "LDRXN — log de roulage", fichier: "captures/log.png",
+    legende: "Votre log ME7Logger, VCDS ou autre, rejoué dans le temps : le curseur suit la map et affiche la valeur interpolée exacte." },
+  { titre: "Comparaison avec l'original", fichier: "captures/comparaison.png",
+    legende: "Toutes les maps modifiées entre deux fichiers, avec le nombre de cellules et l'écart en %. Double-clic pour ouvrir la map." },
+];
+const ecran = document.getElementById("ecran");
+const mapsListe = ["LDRXN <small>sûr</small>", "KFMIRL <small>sûr</small>", "KFMIOP <small>sûr</small>",
+  "KFZW <small>sûr</small>", "KFLDIMX <small>sûr</small>", "KFLDRL <small>à vérifier</small>", "KFPED <small>sûr</small>",
+  "LAMFAW <small>sûr</small>", "KFKHFM <small>sûr</small>", "ZWMIN <small>sûr</small>", "MLHFM <small>sûr</small>"];
+function liste(sel) {
+  return `<div class="liste"><div style="color:var(--gris);padding-bottom:8px">ME7.5 · 1 071 maps</div>` +
+    mapsListe.map((m, i) => `<div class="${i === sel ? "sel" : ""}">${m}</div>`).join("") + "</div>";
+}
+function hexa() {
+  let s = "", seed = 7;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; const v = (seed >> 16) & 0xff; return v < 90 ? (v & 0x0f) : v; };
+  for (let l = 0; l < 22; l++) {
+    const adr = (0x1C3A0 + l * 16).toString(16).toUpperCase().padStart(6, "0");
+    let ligne = `<span class="adr">${adr}</span>  `;
+    for (let i = 0; i < 16; i++) {
+      const b = rnd().toString(16).toUpperCase().padStart(2, "0");
+      const k = l * 16 + i;
+      if (k >= 40 && k < 136) ligne += `<span class="${(k > 70 && k < 84) ? "modif" : "zone"}">${b}</span> `;
+      else ligne += b + " ";
+    }
+    s += ligne + "\n";
+  }
+  return `<div class="hexa">${s}</div>`;
+}
+function surface3d() {
+  const W = 760, H = 400, nx = 14, ny = 10, pts = (f) => {
+    const out = [];
+    for (let j = 0; j < ny; j++) { const row = [];
+      for (let i = 0; i < nx; i++) {
+        const x = i / (nx - 1), y = j / (ny - 1);
+        let z = 0.25 + 0.6 * Math.sin(Math.min(1, x * 1.3) * Math.PI / 2) * (0.6 + 0.4 * y);
+        if (f && x > .25 && x < .85 && y > .15) z *= 1.16;
+        const px = 120 + x * 420 + y * 170, py = 330 - y * 150 - z * 190;
+        row.push([px, py, z]);
+      } out.push(row); }
+    return out;
+  };
+  const o = pts(false), m = pts(true);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">`;
+  for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
+    const q = [m[j][i], m[j][i + 1], m[j + 1][i + 1], m[j + 1][i]];
+    const z = (q[0][2] + q[2][2]) / 2;
+    svg += `<polygon points="${q.map(p => p[0] + "," + p[1]).join(" ")}" fill="${couleur(80 + z * 120)}" fill-opacity=".88" stroke="#0b161d" stroke-width=".6"/>`;
+  }
+  for (let j = 0; j < ny; j++) svg += `<polyline points="${o[j].map(p => p[0] + "," + p[1]).join(" ")}" fill="none" stroke="#e9f2f4" stroke-opacity=".55" stroke-dasharray="4 3"/>`;
+  for (let i = 0; i < nx; i++) svg += `<polyline points="${o.map(r => r[i][0] + "," + r[i][1]).join(" ")}" fill="none" stroke="#e9f2f4" stroke-opacity=".35" stroke-dasharray="4 3"/>`;
+  svg += `<text x="24" y="34" fill="#93a9b2" font-size="13" font-family="JetBrains Mono, Consolas, monospace">KFMIRL  charge (%)  —  régime × couple</text>`;
+  svg += `<text x="24" y="56" fill="#e9f2f4" fill-opacity=".7" font-size="12" font-family="JetBrains Mono, Consolas, monospace">- - -  original en transparence</text></svg>`;
+  return `<div style="height:100%;display:grid;place-items:center;padding:10px">${svg}</div>`;
+}
+function log() {
+  const W = 760, H = 380, N = 160;
+  const serie = (f) => Array.from({ length: N }, (_, i) => f(i / (N - 1)));
+  const rpm = serie(t => 0.15 + 0.75 * Math.min(1, Math.max(0, (t - .1) * 1.6)) - (t > .78 ? (t - .78) * 2.5 : 0));
+  const charge = serie(t => 0.2 + 0.65 * Math.min(1, Math.max(0, (t - .12) * 3)) * (t < .8 ? 1 : .4) + 0.03 * Math.sin(t * 40));
+  const lambda = serie(t => 0.55 - 0.25 * Math.min(1, Math.max(0, (t - .15) * 3)) * (t < .8 ? 1 : .2) + 0.02 * Math.sin(t * 55));
+  const tracer = (s, y0, h, c) => `<polyline points="${s.map((v, i) => (60 + i * (W - 90) / (N - 1)) + "," + (y0 + h - v * h)).join(" ")}" fill="none" stroke="${c}" stroke-width="2"/>`;
+  const cur = 60 + 0.56 * (W - 90);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">`;
+  [["Régime", rpm, 20, "#2fb7b0"], ["Charge", charge, 140, "#f2b84b"], ["Lambda", lambda, 260, "#ef5b2c"]].forEach(([n, s, y, c]) => {
+    svg += `<rect x="60" y="${y}" width="${W - 90}" height="100" fill="#0f2029"/>`;
+    svg += `<text x="8" y="${y + 54}" fill="#93a9b2" font-size="12" font-family="JetBrains Mono, Consolas, monospace">${n}</text>`;
+    svg += tracer(s, y, 100, c);
+  });
+  svg += `<line x1="${cur}" x2="${cur}" y1="14" y2="366" stroke="#fff" stroke-width="1.5"/>`;
+  svg += `<rect x="${cur + 8}" y="22" width="232" height="26" rx="6" fill="#24485a"/>`;
+  svg += `<text x="${cur + 18}" y="40" fill="#fff" font-size="12" font-family="JetBrains Mono, Consolas, monospace">t = 18,4 s  →  LDRXN = 171,3 %</text></svg>`;
+  return `<div style="height:100%;padding:16px 18px">${svg}</div>`;
+}
+function comparaison() {
+  const lignes = [["LDRXN", 16, "+10,0", "+9,8"], ["KFMIRL", 41, "+8,0", "+6,1"], ["KFMIOP", 28, "−5,0", "−4,2"],
+    ["KFLDIMX", 128, "+8,0", "+7,7"], ["KFLDRL", 64, "+4,5", "+3,9"]];
+  let t = `<div style="padding:22px 26px;font-family:var(--mono);font-size:13px">` +
+    `<div style="color:var(--gris);margin-bottom:14px">Version « Stage 1 » comparée à l'original : 5 maps modifiées, 0 zone hors des maps</div>` +
+    `<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:0;border:1px solid #1f3a47;border-radius:10px;overflow:hidden">` +
+    ["Map", "Cellules", "Écart max", "Écart moyen"].map(h => `<div style="padding:10px 14px;background:#132833;color:var(--gris)">${h}</div>`).join("");
+  lignes.forEach(([n, c, m, a], i) => {
+    const bg = i % 2 ? "#0f2029" : "#0b161d";
+    const col = m.startsWith("−") ? "#2fb7b0" : "#f2b84b";
+    t += [n, c, m + " %", a + " %"].map((v, k) => `<div style="padding:11px 14px;background:${bg};${k >= 2 ? "color:" + col : ""}">${v}</div>`).join("");
+  });
+  return t + "</div></div>";
+}
+const VUES = [
+  () => `<div class="app" style="grid-template-columns:240px 1fr">${liste(0)}${hexa()}</div>`,
+  () => `<div class="app" style="grid-template-columns:240px 1fr">${liste(1)}${surface3d()}</div>`,
+  () => `<div class="app" style="grid-template-columns:240px 1fr">${liste(0)}${log()}</div>`,
+  () => `<div class="app" style="grid-template-columns:1fr">${comparaison()}</div>`,
+];
+function montrer(i) {
+  document.querySelectorAll(".onglets button").forEach((b, k) => b.setAttribute("aria-selected", k === i));
+  document.getElementById("cap-titre").textContent = CAPTURES[i].titre;
+  document.getElementById("cap-legende").textContent = CAPTURES[i].legende;
+  ecran.innerHTML = VUES[i]();
+  const img = new Image();                         // vraie capture si le fichier existe
+  img.onload = () => { if (ecran.dataset.i == i) { ecran.innerHTML = ""; img.alt = CAPTURES[i].titre; ecran.appendChild(img); } };
+  ecran.dataset.i = i;
+  img.src = CAPTURES[i].fichier;
+}
+document.querySelectorAll(".onglets button").forEach((b, i) => b.addEventListener("click", () => montrer(i)));
+montrer(0);
+</script>
+</body>
+</html>
