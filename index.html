@@ -237,6 +237,24 @@ h2{font-weight:800;font-size:clamp(30px,3.6vw,46px);line-height:1.05;
 details{margin-top:18px;border-top:1px solid var(--trait);padding-top:14px;color:var(--gris);font-size:15px}
 summary{cursor:pointer;color:var(--encre)}
 
+/* offre de lancement */
+.lancement{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:0 0 26px;padding:16px 22px;
+  border-radius:16px;border:1px solid var(--accent);background:linear-gradient(90deg,var(--accent-fonce),var(--panneau) 70%)}
+.lancement strong{font-size:18px}
+.lancement p{margin:0;color:var(--gris);flex:1;min-width:220px}
+.compte{display:flex;gap:8px;font-family:var(--mono)}
+.compte span{min-width:58px;text-align:center;padding:6px 8px;border-radius:10px;background:var(--nuit);
+  border:1px solid var(--trait);font-size:13px;color:var(--gris);line-height:1.2}
+.compte b{display:block;font-size:22px;color:var(--encre)}
+.barre{display:block;font-size:.4em;font-weight:600;color:var(--gris);text-decoration:line-through;
+  text-decoration-thickness:2px;margin-bottom:6px;letter-spacing:0}
+.pastille{display:inline-block;font:600 13px var(--mono);color:#04201b;background:var(--accent);border-radius:12px;
+  padding:4px 12px;margin-bottom:18px;text-decoration:none}
+.montant b .val{font-size:inherit;color:inherit;padding:0;line-height:inherit}
+.montant b{white-space:nowrap}
+@media (max-width:480px){.montant b{font-size:56px}}
+.lancement[hidden],.barre[hidden],.pastille[hidden]{display:none}
+
 footer{padding:40px 0 60px;color:var(--gris);font-size:14px}
 footer .wrap{display:flex;flex-wrap:wrap;gap:16px 40px;justify-content:space-between}
 footer p{margin:0;max-width:44em}
@@ -295,6 +313,7 @@ footer p{margin:0;max-width:44em}
   <div class="hero">
     <div class="wrap">
       <div>
+        <a class="pastille js-lancement" href="#prix" hidden>Offre de lancement jusqu'au <span class="js-fin"></span></a>
         <h1><span class="ligne">Ouvrez le fichier.</span><span class="ligne">TGM trouve les maps.</span></h1>
         <p class="chapo">TGM Mapping Software identifie le calculateur, place les cartographies au bon
           endroit et corrige le checksum avant l'export. Vous passez votre temps sur la calibration,
@@ -390,11 +409,19 @@ footer p{margin:0;max-width:44em}
     <div class="wrap">
       <h2>Deux licences, un seul paiement</h2>
       <p class="intro">Chaque licence est activée sur un ordinateur. Les mises à jour sont incluses.</p>
+      <div class="lancement js-lancement" hidden>
+        <strong>Offre de lancement</strong>
+        <p>Prix réduits sur les deux licences jusqu'au <b class="js-fin"></b> inclus. La licence achetée
+          reste valable pour toujours, mises à jour comprises.</p>
+        <div class="compte" aria-label="Temps restant">
+          <span><b id="cpt-j">0</b>jours</span><span><b id="cpt-h">0</b>heures</span><span><b id="cpt-m">0</b>min</span>
+        </div>
+      </div>
       <div class="tarifs">
         <div class="offre">
           <h3>Standard</h3>
           <p class="pour">Pour éditer vos fichiers avec vos propres descriptions.</p>
-          <div class="montant"><b id="prix-standard">30 €</b><span>une fois<br>par ordinateur</span></div>
+          <div class="montant"><b><s class="barre js-barre" id="avant-standard" hidden></s><span class="val" id="prix-standard">49 €</span></b><span>une fois<br>par ordinateur</span></div>
           <ul>
             <li>Ouverture .bin, .hex, .ols</li>
             <li>Éditeur hexadécimal</li>
@@ -405,12 +432,12 @@ footer p{margin:0;max-width:44em}
             <li class="non">Identification et repérage automatiques</li>
             <li class="non">Assistant, logs, comparaison et report</li>
           </ul>
-          <a class="btn btn-ligne js-acheter" data-offre="Standard" href="#">Commander la Standard</a>
+          <a class="btn btn-ligne js-acheter" data-offre="Standard" href="#">Acheter la Standard</a>
         </div>
         <div class="offre vedette">
           <h3>Pro</h3>
           <p class="pour">Pour aller vite sur des fichiers que vous ne connaissez pas.</p>
-          <div class="montant"><b id="prix-pro">60 €</b><span>une fois<br>par ordinateur</span></div>
+          <div class="montant"><b><s class="barre js-barre" id="avant-pro" hidden></s><span class="val" id="prix-pro">149 €</span></b><span>une fois<br>par ordinateur</span></div>
           <ul>
             <li>Tout ce que contient la Standard</li>
             <li>Identification automatique du calculateur</li>
@@ -420,9 +447,11 @@ footer p{margin:0;max-width:44em}
             <li>Comparaison et report des modifications</li>
             <li>Nouvelles empreintes en continu</li>
           </ul>
-          <a class="btn btn-chaud js-acheter" data-offre="Pro" href="#">Commander la Pro</a>
+          <a class="btn btn-chaud js-acheter" data-offre="Pro" href="#">Acheter la Pro</a>
         </div>
       </div>
+      <p class="note" style="margin:18px 4px 0">Paiement sécurisé par carte avec Stripe. Votre clé de licence s'affiche
+        dès le paiement confirmé, et un reçu vous est envoyé par e-mail.</p>
       <div class="essai-bandeau">
         <p><strong>Pas encore décidé ?</strong> L'essai gratuit de 14 jours donne accès à toute la version Pro.</p>
         <a class="btn btn-ligne btn-petit js-essai" href="#telecharger">Démarrer l'essai</a>
@@ -450,7 +479,7 @@ footer p{margin:0;max-width:44em}
         <li><b>Installez TGM</b><span>Lancez l'installateur téléchargé et suivez les étapes.</span></li>
         <li><b>Démarrez l'essai</b><span>À l'ouverture, cliquez sur « Essai gratuit 14 jours ».</span></li>
         <li><b>Ouvrez un fichier</b><span>Glissez votre .bin dans la fenêtre : l'identification démarre seule.</span></li>
-        <li><b>Gardez votre travail</b><span>À l'achat, entrez votre clé dans Aide, Activation. Vos projets restent en place.</span></li>
+        <li><b>Gardez votre travail</b><span>À l'achat, votre clé s'affiche aussitôt : entrez-la dans Aide, Activation. Vos projets restent en place.</span></li>
       </ol>
     </div>
   </section>
@@ -470,14 +499,41 @@ const CONFIG = {
   email: "turbogazouzmotorsport@gmail.com",
   // page des versions : contient toujours le dernier installateur
   telecharger: "https://github.com/TurboGazouzMotorsport/tgm-ms-maj/releases/latest",
-  prixStandard: "30 €",
-  prixPro: "60 €",
+  // paiement en ligne (serveur de licences Cloudflare + Stripe) ; "" = commande par e-mail
+  achat: "https://tgm-licences.mekamyre.workers.dev/achat",
+  // offre de lancement : prix réduits jusqu'à cette date incluse (AAAA-MM-JJ), puis prix normaux.
+  // Mettre les mêmes valeurs dans Cloudflare : PRIX_STANDARD / PRIX_PRO (lancement),
+  // PRIX_STANDARD_APRES / PRIX_PRO_APRES (normaux) et FIN_LANCEMENT.
+  finLancement: "2027-01-31",
+  prixStandard: "49 €",          // prix de lancement
+  prixPro: "149 €",
+  prixStandardNormal: "69 €",    // prix après l'offre
+  prixProNormal: "199 €",
 };
 /* ==================================================================== */
 
 document.getElementById("annee").textContent = new Date().getFullYear();
-document.getElementById("prix-standard").textContent = CONFIG.prixStandard;
-document.getElementById("prix-pro").textContent = CONFIG.prixPro;
+const finOffre = CONFIG.finLancement ? new Date(CONFIG.finLancement + "T23:59:59+01:00") : null;
+const enLancement = finOffre && !isNaN(finOffre) && Date.now() <= finOffre;
+document.getElementById("prix-standard").textContent = enLancement ? CONFIG.prixStandard : CONFIG.prixStandardNormal || CONFIG.prixStandard;
+document.getElementById("prix-pro").textContent = enLancement ? CONFIG.prixPro : CONFIG.prixProNormal || CONFIG.prixPro;
+if (enLancement) {
+  const jour = finOffre.toLocaleDateString("fr-FR", {day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Paris"});
+  document.querySelectorAll(".js-fin").forEach(e => e.textContent = jour);
+  document.querySelectorAll(".js-lancement").forEach(e => e.hidden = false);
+  [["avant-standard", CONFIG.prixStandardNormal], ["avant-pro", CONFIG.prixProNormal]].forEach(([id, v]) => {
+    const e = document.getElementById(id);
+    if (v) { e.textContent = v; e.hidden = false; e.setAttribute("aria-label", "au lieu de " + v); }
+  });
+  const compte = () => {
+    const r = Math.max(0, finOffre - Date.now());
+    document.getElementById("cpt-j").textContent = Math.floor(r / 864e5);
+    document.getElementById("cpt-h").textContent = Math.floor(r / 36e5) % 24;
+    document.getElementById("cpt-m").textContent = Math.floor(r / 6e4) % 60;
+  };
+  compte();
+  setInterval(compte, 30000);
+}
 const dl = document.getElementById("lien-telecharger");
 dl.href = CONFIG.telecharger;
 dl.rel = "noopener";
@@ -485,9 +541,8 @@ const contact = document.getElementById("lien-contact");
 contact.href = "mailto:" + CONFIG.email;
 document.querySelectorAll(".js-acheter").forEach(a => {
   const offre = a.dataset.offre;
-  a.href = "mailto:" + CONFIG.email + "?subject=" + encodeURIComponent("Commande TGM Mapping Software " + offre) +
-    "&body=" + encodeURIComponent("Bonjour,\n\nJe souhaite commander la licence " + offre +
-    " de TGM Mapping Software.\n\nNom ou société :\nVille :\n\nMerci !");
+  a.href = CONFIG.achat ? CONFIG.achat + "?offre=" + offre :
+    "mailto:" + CONFIG.email + "?subject=" + encodeURIComponent("Commande TGM Mapping Software " + offre);
 });
 
 /* ---------- map vivante (héros) ---------- */
